@@ -2,7 +2,9 @@
 
 
 #include "PlayerableCharacter.h"
-#include "Components/CapsuleComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
 APlayerableCharacter::APlayerableCharacter()
@@ -17,6 +19,27 @@ APlayerableCharacter::APlayerableCharacter()
 		GetMesh()->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -90.0f), FRotator(0.0f, -90.0f, 0.0f));
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
+
+	// Don't rotate when the controller rotates
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+
+	// Character moves in the direction of input
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
+
+	// Camera Initialize
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CAMERABOOM"));
+	CameraBoom->SetupAttachment(RootComponent);
+	CameraBoom->TargetArmLength = m_fCameraBoomLength;
+	// Rotate the Arm based on the Controller
+	CameraBoom->bUsePawnControlRotation = true;
+
+	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("CAMERA"));
+	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	// Camera doesn't rotate relative to arm
+	Camera->bUsePawnControlRotation = false;
 }
 
 // Called when the game starts or when spawned
@@ -37,6 +60,32 @@ void APlayerableCharacter::Tick(float DeltaTime)
 void APlayerableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	// Binding MovingFunctions 
+	PlayerInputComponent->BindAxis("MoveVertical", this, &APlayerableCharacter::MoveVertical);
+	PlayerInputComponent->BindAxis("MoveHorizontal", this, &APlayerableCharacter::MoveHorizontal);
+
+	// Binding RotateFunctions
+	PlayerInputComponent->BindAxis("TurnVertical", this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("TurnHorizontal", this, &APawn::AddControllerYawInput);
+}
+
+void APlayerableCharacter::MoveVertical(float fValue)
+{
+	if (Controller != nullptr && fValue != 0.0f)
+	{
+		// Find out Which way is forward
+		const FRotator CameraRotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0.0f, CameraRotation.Yaw, 0.0f);
+
+		// Get Forward Vector
+		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		AddMovementInput(Direction, fValue);
+	}
+}
+
+void APlayerableCharacter::MoveHorizontal(float fValue)
+{
 
 }
 

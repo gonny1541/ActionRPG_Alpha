@@ -14,4 +14,7 @@ class ACTIONRPG_ALPHA_API AActionRPG_AlphaGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 	
+public:
+	AActionRPG_AlphaGameModeBase();
+
 };
