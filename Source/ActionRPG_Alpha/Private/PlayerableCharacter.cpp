@@ -74,7 +74,7 @@ void APlayerableCharacter::MoveVertical(float fValue)
 {
 	if (Controller != nullptr && fValue != 0.0f)
 	{
-		// Find out Which way is forward
+		// Find out which way is forward
 		const FRotator CameraRotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0.0f, CameraRotation.Yaw, 0.0f);
 
@@ -86,6 +86,14 @@ void APlayerableCharacter::MoveVertical(float fValue)
 
 void APlayerableCharacter::MoveHorizontal(float fValue)
 {
+	if (Controller != nullptr && fValue != 0.0f)
+	{
+		// Find out which way is right
+		const FRotator CameraRotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0.0f, CameraRotation.Yaw, 0.0f);
 
+		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+		AddMovementInput(Direction, fValue);
+	}
 }
 
