@@ -18,6 +18,14 @@ APlayerableCharacter::APlayerableCharacter()
 		GetMesh()->SetSkeletalMesh(TempMesh.Object);
 		GetMesh()->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -90.0f), FRotator(0.0f, -90.0f, 0.0f));
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		// Set AnimInstance in Mesh
+		ConstructorHelpers::FClassFinder<UAnimInstance> TempAnim(TEXT("AnimBlueprint'/Game/Blueprint/ABP_PlayerAnim.ABP_PlayerAnim_C'"));
+		if (TempAnim.Succeeded())
+		{
+			GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+			GetMesh()->SetAnimInstanceClass(TempAnim.Class);
+		}
 	}
 
 	// Don't rotate when the controller rotates
