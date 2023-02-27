@@ -36,6 +36,8 @@ APlayerableCharacter::APlayerableCharacter()
 	// Character moves in the direction of input
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
+	GetCharacterMovement()->JumpZVelocity = 500.0f;
+	GetCharacterMovement()->AirControl = 0.0f;
 
 	// Camera Initialize
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CAMERABOOM"));
@@ -76,6 +78,10 @@ void APlayerableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	// Binding RotateFunctions
 	PlayerInputComponent->BindAxis("TurnVertical", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("TurnHorizontal", this, &APawn::AddControllerYawInput);
+
+	// Binding Jump
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 }
 
 void APlayerableCharacter::MoveVertical(float fValue)

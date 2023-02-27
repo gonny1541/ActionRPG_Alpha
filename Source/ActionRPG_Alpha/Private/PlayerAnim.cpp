@@ -2,15 +2,22 @@
 
 
 #include "PlayerAnim.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 void UPlayerAnim::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	auto player = TryGetPawnOwner();
+	auto owner = TryGetPawnOwner();
+	auto player = Cast<ACharacter>(owner);
 
 	if (player != NULL)
 	{
-		m_fSpeed = player->GetVelocity().Size();
+		UCharacterMovementComponent* moveComp = player->GetCharacterMovement();
+
+		m_fSpeed = moveComp->GetCurrentAcceleration().Length();
+		m_fZVelocity = moveComp->Velocity.Z;
+		m_bisAir = moveComp->IsFalling();
 	}
 }
