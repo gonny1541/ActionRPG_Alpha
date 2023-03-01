@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "ActionRPG_Lib.h"
 #include "Animation/AnimInstance.h"
 #include "PlayerAnim.generated.h"
 

@@ -12,12 +12,11 @@ void UPlayerAnim::NativeUpdateAnimation(float DeltaSeconds)
 	auto owner = TryGetPawnOwner();
 	auto player = Cast<ACharacter>(owner);
 
-	if (player != NULL)
-	{
-		UCharacterMovementComponent* moveComp = player->GetCharacterMovement();
+	RCHECK(player != NULL);
+	UCharacterMovementComponent* moveComp = player->GetCharacterMovement();
 
-		m_fSpeed = moveComp->GetCurrentAcceleration().Length();
-		m_fZVelocity = moveComp->Velocity.Z;
-		m_bisAir = moveComp->IsFalling();
-	}
+	RCHECK(moveComp != NULL);
+	m_fSpeed = moveComp->GetCurrentAcceleration().Length();
+	m_fZVelocity = moveComp->Velocity.Z;
+	m_bisAir = moveComp->IsFalling();
 }
