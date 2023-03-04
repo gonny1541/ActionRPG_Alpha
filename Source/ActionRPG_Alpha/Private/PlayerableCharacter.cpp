@@ -5,6 +5,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "PlayerAnim.h"
 
 // Sets default values
 APlayerableCharacter::APlayerableCharacter()
@@ -23,7 +24,6 @@ APlayerableCharacter::APlayerableCharacter()
 		ConstructorHelpers::FClassFinder<UAnimInstance> TempAnim(TEXT("AnimBlueprint'/Game/Blueprint/ABP_PlayerAnim.ABP_PlayerAnim_C'"));
 		if (TempAnim.Succeeded())
 		{
-			GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 			GetMesh()->SetAnimInstanceClass(TempAnim.Class);
 		}
 	}
@@ -50,6 +50,9 @@ APlayerableCharacter::APlayerableCharacter()
 	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	// Camera doesn't rotate relative to arm
 	Camera->bUsePawnControlRotation = false;
+
+	m_iMaxCombo = 3;
+	ResetAttackComboState();
 }
 
 // Called when the game starts or when spawned
@@ -63,6 +66,28 @@ void APlayerableCharacter::BeginPlay()
 void APlayerableCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+}
+
+void APlayerableCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	PlayerAnim = Cast<UPlayerAnim>(GetMesh()->GetAnimInstance());
+	RCHECK(PlayerAnim != nullptr);
+	PlayerAnim->SetMaxComboIndex(m_iMaxCombo);
+
+	PlayerAnim->OnNextAttackCheck.AddLambda([this]() -> void {
+		RLOG(Warning, TEXT("OnNextAttackCheck"));
+		m_bCanNextCombo = false;
+
+		if(m_bIsComboInputOn)
+		{
+			SetNextAttackCombo();
+			PlayerAnim->JumpToAttackSection(m_iCurrentCombo);
+		}
+	});
+
+	PlayerAnim->OnMontageEnded.AddDynamic(this, &APlayerableCharacter::OnAttackMontageEnded);
 
 }
 
@@ -80,12 +105,18 @@ void APlayerableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAxis("TurnHorizontal", this, &APawn::AddControllerYawInput);
 
 	// Binding Jump
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &APlayerableCharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+
+	// Binding Attack
+	PlayerInputComponent->BindAction("Attack",IE_Pressed, this, &APlayerableCharacter::Attack);
 }
 
 void APlayerableCharacter::MoveVertical(float fValue)
 {
+	if(m_bIsAttacking == true)
+		return;
+
 	if (Controller != nullptr && fValue != 0.0f)
 	{
 		// Find out which way is forward
@@ -100,6 +131,9 @@ void APlayerableCharacter::MoveVertical(float fValue)
 
 void APlayerableCharacter::MoveHorizontal(float fValue)
 {
+	if (m_bIsAttacking == true)
+		return;
+
 	if (Controller != nullptr && fValue != 0.0f)
 	{
 		// Find out which way is right
@@ -111,3 +145,53 @@ void APlayerableCharacter::MoveHorizontal(float fValue)
 	}
 }
 
+void APlayerableCharacter::Jump()
+{
+	if(m_bIsAttacking)
+		return;
+
+	ACharacter::Jump();
+}
+
+void APlayerableCharacter::Attack()
+{
+	if(GetCharacterMovement()->IsFalling())
+		return;
+
+	if(m_bIsAttacking)
+	{
+		RCHECK(FMath::IsWithinInclusive<int32>(m_iCurrentCombo,1,m_iMaxCombo));
+		m_bIsComboInputOn = true;
+	}
+	else
+	{
+		RCHECK(m_iCurrentCombo == 0);
+		SetNextAttackCombo();
+		PlayerAnim->PlayAttackAnim();
+		PlayerAnim->JumpToAttackSection(m_iCurrentCombo);
+		m_bIsAttacking = true;
+	}
+}
+
+void APlayerableCharacter::SetNextAttackCombo()
+{
+	m_bCanNextCombo = true;
+	m_bIsComboInputOn = false;
+	RCHECK(FMath::IsWithinInclusive<int32>(m_iCurrentCombo, 0, m_iMaxCombo-1));
+	m_iCurrentCombo = FMath::Clamp<int32>(m_iCurrentCombo + 1, 1, m_iMaxCombo);
+}
+
+void APlayerableCharacter::ResetAttackComboState()
+{
+	m_bIsComboInputOn = false;
+	m_bIsAttacking = false;
+	m_bCanNextCombo = false;
+	m_iCurrentCombo = 0;
+}
+
+void APlayerableCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	RCHECK(m_bIsAttacking == true);
+	RCHECK(m_iCurrentCombo > 0);
+	ResetAttackComboState();
+}
